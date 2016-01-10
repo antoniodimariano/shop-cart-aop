@@ -58,22 +58,20 @@ public aspect LoginAspect {
 
 	after(Shop shop) : trap_ShopInit(shop) {
 		shop.getProdotti();
-		System.out.println("*[Aspect]*: Inserisco prodotti nel negozio");
+		System.out.println("*[Aspect]*: Inserting store's products");
 	}
 
-	
-
 	/*
-	 * Verifica che la sessione sia stata creata
+	 * Verifies if a valid session has been created
 	 */
 	before(Server srv, String s, int q, Request req) : trace_server(srv, s,q,req) {
 		if (req.getSessionCode().equals(fake_session)) {
 			System.out.println("*[Aspect]*:Session Error on "
 					+ thisJoinPoint.getSignature());
 		}
-		/* check session timestamp */
+		/* checks session's timestamp */
 		if (checkSessionTimestamp(srv.getSession())) {
-			System.out.println("*[Aspect]*: Session e' ancora valida");
+			System.out.println("*[Aspect]*: Session valid");
 		} else {
 			System.out
 					.println("*[Aspect]*: Session expired. Redirect to logout");
@@ -81,38 +79,40 @@ public aspect LoginAspect {
 		}
 	}
 
-	/* Intercetto il valore di ritorno della funzione login() */
+	/* Aspect on the return's value of the login() */
 	after(Server server, String username, String password) returning(Response r): trapLoginExecution(server,username,password) {
-		System.out.println("*[Aspect]* after con valore di ritorno ="
+		System.out.println("*[Aspect]* after return's value ="
 				+ r.getEsito());
 
-		/* login riuscita */
+		/* login ok */
 		if (r.getEsito()) {
 			System.out.println("*[Aspect]* Login ok ");
 
 			/*
-			 * controllo se l'utente era gia' presente nel sistema
+			 * checks if we have seen before the same user
 			 */
 			String userHasSession = isReturnedUser(username);
 
 			/*
-			 * recupero o assegno sessione
+			 * returns the session or creates a new one
 			 */
 			String userSessionid = (userHasSession != null && !userHasSession
 					.isEmpty()) ? userHasSession : initSessionId();
 			Session session = setSession(userSessionid);
-			/* salvo il codice della Session in Response */
+			/* stores the session code */
 			r.setSessionCode(session.getCodice());
-			/* Salvo l'obj Session simulando la persistenza */
+			/* persists the session */
 			persistSession(session);
-			/* salvo la session nell'instanza del server */
+			/* stores session into the server's instance  */
 			server.setSession(session);
 		} else
 			System.out.println("*[Aspect]* Login failed");
 	}
 
 	/*
-	 * @param user login Ricerca la chiave login
+	 * @param user login 
+	 * Finds user by email 
+	 *
 	 */
 	private String isReturnedUser(String login) {
 		ClientServiceImpl cl = new ClientServiceImpl();
@@ -124,7 +124,7 @@ public aspect LoginAspect {
 	}
 
 	/*
-	 * genera un ID di session
+	 * Session ID generation 
 	 */
 	private String initSessionId() {
 		GenerateId myId = new GenerateId();
@@ -133,9 +133,11 @@ public aspect LoginAspect {
 	}
 
 	/*
-	 * @param sessionID inizializza una nuova istanza di Session e salva il
-	 * codice sessionID e e il carrello utente N.B: da integrare con nuove
-	 * funzioni di gestione del carrello
+	 * @param sessionID 
+	 * 
+	 * Inits a new session instance and save the sessionId and the user
+	 * todo: to integrate with newest cart's functions
+	 * 
 	 */
 	private Session setSession(String sessionID) {
 		Session session = new Session();
@@ -149,10 +151,10 @@ public aspect LoginAspect {
 
 	/*
 	 * @param Session sessionID
+	 * @return a Carrello's instance
+	 *
+	 * Checks if a cart instance has been stored in session
 	 * 
-	 * @return istanza di Carrello
-	 * 
-	 * controllo se esite un carrello salvato in sessione.
 	 */
 	private Carrello getUserCart(String sessionID) {
 
@@ -169,12 +171,14 @@ public aspect LoginAspect {
 	}
 
 	/*
-	 * @param Session session simula la persistenza dei dati di session,
-	 * memorizzando la chiave in una classe Singleton
+	 * @param Session session
+	 *  
+	 * It simulates the data persistence in session. It stores a key on a Singleton class
+	 * 
 	 */
 	private void persistSession(Session session) {
 		SessionServiceImpl.getInstance().saveSession(session);
-		System.out.println("*[Aspect]* SESSIONE SALVATA:"
+		System.out.println("*[Aspect]* SESSION HAS BEEN STORED :"
 				+ SessionServiceImpl.getInstance()
 						.findSessionByKey(session.getCodice()).getCodice());
 
@@ -183,8 +187,9 @@ public aspect LoginAspect {
 	/*
 	 * @param Session session
 	 * 
-	 * @return Boolean simula il controllo del timestamp associato alla Sessione
-	 * utente. Aggiungere la logica per il controllo
+	 * @return Boolean 
+	 * It simulates a timestamp check
+	 *
 	 */
 	private Boolean checkSessionTimestamp(Session session) {
 		Long sessionCreated = session.getCreazione();
